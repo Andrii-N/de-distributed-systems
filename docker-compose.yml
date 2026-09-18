@@ -1,0 +1,42 @@
+services:
+  master:
+    build:
+      context: .
+      dockerfile: master/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      SECONDARY_URLS: "http://secondary1:8080,http://secondary2:8080"
+    depends_on:
+      - secondary1
+      - secondary2
+
+  secondary1:
+    build:
+      context: .
+      dockerfile: secondary/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      PORT: "8080"
+      REPLICATION_DELAY_MS: "0"
+
+  secondary2:
+    build:
+      context: .
+      dockerfile: secondary/Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      PORT: "8080"
+      # Intentionally slow, to make the master's blocking replication observable:
+      # a POST to the master should take at least this long to complete.
+      REPLICATION_DELAY_MS: "5000"
+
+  devcontainer:
+    build:
+      context: .devcontainer
+    volumes:
+      - .:/workspace:cached
+    command: sleep infinity
