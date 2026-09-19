@@ -45,18 +45,25 @@ JDK's `java.net.http.HttpClient`. This iteration assumes a **perfect link**
 
 Requires JDK 25+ and Maven.
 
+Configuration is read from environment variables (`System.getenv()`), not
+`-D` flags. Bash:
+
 ```bash
 mvn -q package
 
-java -DPORT=8081 -jar secondary/target/secondary.jar &
-java -DPORT=8082 -DREPLICATION_DELAY_MS=5000 -jar secondary/target/secondary.jar &
-SECONDARY_URLS="http://localhost:8081,http://localhost:8082" \
-  PORT=8080 java -jar master/target/master.jar &
+PORT=8081 java -jar secondary/target/secondary.jar &
+PORT=8082 REPLICATION_DELAY_MS=5000 java -jar secondary/target/secondary.jar &
+PORT=8080 SECONDARY_URLS="http://localhost:8081,http://localhost:8082" \
+  java -jar master/target/master.jar &
 ```
 
-(Environment variables are read from `System.getenv()`, so on Windows use
-`$env:PORT="8081"` etc. instead of `-D` flags, or run via Docker Compose
-below.)
+PowerShell (one terminal per service):
+
+```powershell
+$env:PORT="8081"; java -jar secondary/target/secondary.jar
+$env:PORT="8082"; $env:REPLICATION_DELAY_MS="5000"; java -jar secondary/target/secondary.jar
+$env:PORT="8080"; $env:SECONDARY_URLS="http://localhost:8081,http://localhost:8082"; java -jar master/target/master.jar
+```
 
 ## Running with Docker Compose
 
