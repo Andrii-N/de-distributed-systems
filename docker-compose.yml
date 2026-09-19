@@ -33,10 +33,3 @@ services:
       # Intentionally slow, to make the master's blocking replication observable:
       # a POST to the master should take at least this long to complete.
       REPLICATION_DELAY_MS: "5000"
-
-  devcontainer:
-    build:
-      context: .devcontainer
-    volumes:
-      - .:/workspace:cached
-    command: sleep infinity
