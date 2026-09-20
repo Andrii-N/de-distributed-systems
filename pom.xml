@@ -14,7 +14,7 @@
     </modules>
 
     <properties>
-      <maven.complier.release>25</maven.complier.release>
+      <maven.compiler.release>25</maven.compiler.release>
       <maven.complier.plugin.version>3.13.0</maven.complier.plugin.version>
       <com.google.code.gson.version>2.14.0</com.google.code.gson.version>
     </properties>
