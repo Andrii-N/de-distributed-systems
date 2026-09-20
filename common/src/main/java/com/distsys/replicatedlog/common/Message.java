@@ -38,6 +38,11 @@ public final class Message {
     }
 
     public static Message fromJson(JsonObject json) {
+        for (String field : new String[] {"id", "text", "timestamp"}) {
+            if (!json.has(field) || json.get(field).isJsonNull()) {
+                throw new IllegalArgumentException("Missing required field: " + field);
+            }
+        }
         Gson gson = new Gson();
         return gson.fromJson(json, Message.class);
     }
@@ -65,8 +70,4 @@ public final class Message {
     public String toString() {
         return toJson().toString();
     }
-
-
-
-
 }

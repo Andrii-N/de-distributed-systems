@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MessageTest {
     
@@ -32,4 +33,12 @@ public class MessageTest {
 
         assertEquals(new Message("12345", "hi", 123L), parsed);
     }
+
+    @Test
+    void rejectsJsonWithMissingFields() {
+        JsonObject json = JsonParser.parseString("{\"text\":\"hi\"}").getAsJsonObject();
+
+        assertThrows(IllegalArgumentException.class, () -> Message.fromJson(json));
+    }   
+
 }
