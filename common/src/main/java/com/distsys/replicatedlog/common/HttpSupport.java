@@ -7,10 +7,25 @@ import java.nio.charset.StandardCharsets;
 import com.sun.net.httpserver.HttpExchange;
 
 /**
- * Helpers to faciliate HttpExchange 
+ * Helpers to faciliate HttpExchange in both master and secondary
  */
 
 public final class HttpSupport {
+
+    public static int readPort(String rawPort) {
+        String raw = System.getenv().getOrDefault("PORT", rawPort).trim();
+        int port;
+        try {
+            port = Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("PORT must be a number, got: '" + raw + "'", e);
+        }
+        if (port < 1 || port > 65535) {
+            throw new IllegalArgumentException("PORT must be between 1 and 65535, got: " + port);
+        }
+        return port;
+}
+
 
     public static void sendJson(HttpExchange exchange, int statusCode, String jsonBody) throws IOException {
         byte[] bytes = jsonBody.getBytes(StandardCharsets.UTF_8);
