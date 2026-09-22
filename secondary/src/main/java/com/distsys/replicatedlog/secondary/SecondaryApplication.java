@@ -8,7 +8,11 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import com.distsys.replicatedlog.common.HttpSupport;
+import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.MessageStore;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 
 public class SecondaryApplication {
@@ -21,8 +25,8 @@ public class SecondaryApplication {
         SecondaryApplication app = new SecondaryApplication();
         int port = HttpSupport.readPort("8080");
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/replicate");
-        server.createContext("/messages", app::handleGetMessage);
+        server.createContext("/replicate", app::handleReplicate);
+        server.createContext("/messages", app::handleGetMessages);
         
         /* HTTP requests can run on different threads at once */
         server.setExecutor(Executors.newCachedThreadPool());
@@ -30,7 +34,7 @@ public class SecondaryApplication {
         server.start();
     }
 
-    private void handleGetMessage(HttpExchange exchange) throws IOException {
+    private void handleGetMessages(HttpExchange exchange) throws IOException {
         if(!("GET".equalsIgnoreCase(exchange.getRequestMethod()))) {
             HttpSupport.sendPlainText(exchange, 405, "Method not allowed");
             return;
@@ -43,7 +47,20 @@ public class SecondaryApplication {
             HttpSupport.sendPlainText(exchange, 405, "Method not allowed");
             return;
         }
+        String body = HttpSupport.readRequestBody(exchange);
+        Message message;
+        try {
+            message = Message.fromJson(JsonParser.parseString(body).getAsJsonObject());
+        }
+        catch (JsonParseException | IllegalArgumentException e) {
+            HttpSupport.sendPlainText(exchange, 400, "Invalid request body: " + e.getMessage());
+            return;
+        }  
 
+        /* Replicate message*/
+        messages.append(message);
 
+        /* Acknowledgement send*/
+        HttpSupport.sendJson(exchange, 200, message.toJson().toString());
     }
 }
