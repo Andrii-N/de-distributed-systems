@@ -19,6 +19,8 @@ public class SecondaryApplication {
         int port = HttpSupport.readPort("8080");
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/messages", app::handleGetMessage);
+        
+        /* HTTP requests can run on different threads at once */
         server.setExecutor(Executors.newCachedThreadPool());
 
         server.start();
