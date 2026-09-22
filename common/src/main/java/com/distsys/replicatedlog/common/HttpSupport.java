@@ -1,6 +1,9 @@
 package com.distsys.replicatedlog.common;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -30,6 +33,16 @@ public final class HttpSupport {
         return port;
     } 
 
+    public static String readRequestBody (HttpExchange exchange) throws IOException {
+        try
+        (
+            InputStream in = exchange.getRequestBody();
+            ByteArrayOutputStream out = new ByteArrayOutputStream()
+        ) {
+            in.transferTo(out);
+            return out.toString(StandardCharsets.UTF_8);
+        }
+    }
 
     public static void sendJson(HttpExchange exchange, int statusCode, String jsonBody) throws IOException {
         byte[] bytes = jsonBody.getBytes(StandardCharsets.UTF_8);
