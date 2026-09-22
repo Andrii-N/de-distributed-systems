@@ -12,17 +12,20 @@ import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.MessageStore;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 
 
 public class SecondaryApplication {
 
     private final MessageStore messages = new MessageStore();
+    private final long replicationDelayMs;
     
-    public SecondaryApplication() {}
+    public SecondaryApplication(long replicationDelayMs) {
+        this.replicationDelayMs = replicationDelayMs;
+    }
 
     public static void main (String[] args) throws IOException {
-        SecondaryApplication app = new SecondaryApplication();
+        long delayMs = HttpSupport.readDelayMs("5000");
+        SecondaryApplication app = new SecondaryApplication(delayMs);
         int port = HttpSupport.readPort("8080");
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/replicate", app::handleReplicate);
@@ -55,12 +58,33 @@ public class SecondaryApplication {
         catch (JsonParseException | IllegalArgumentException e) {
             HttpSupport.sendPlainText(exchange, 400, "Invalid request body: " + e.getMessage());
             return;
-        }  
+        }
+        catch(RuntimeException e) {
+            HttpSupport.sendPlainText(exchange, 503, "Server unavailable: " + e.getMessage());
+            return;
+        }
 
         /* Replicate message*/
         messages.append(message);
 
+        /* Delay after replication, prior to ack - so GET mid-delay includes message */
+        sleep(replicationDelayMs);
+
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 200, message.toJson().toString());
+    }
+
+    private static void sleep(long milliseconds) {
+        if (milliseconds <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(milliseconds);
+        }
+        catch(InterruptedException e) {
+            /* Restore interrupted indication before doing anything else */
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while simulating replication delay", e); 
+        }
     }
 }

@@ -2,7 +2,6 @@ package com.distsys.replicatedlog.common;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -24,14 +23,35 @@ public final class HttpSupport {
         int port;
         try {
             port = Integer.parseInt(raw);
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e) {
             throw new IllegalArgumentException("PORT must be a number, got: '" + raw + "'", e);
         }
         if (port < 1 || port > 65535) {
             throw new IllegalArgumentException("PORT must be between 1 and 65535, got: " + port);
         }
         return port;
-    } 
+    }
+
+    public static long readDelayMs(String rawDelayMs) {
+        String raw = System.getenv().getOrDefault("REPLICATION_DELAY_MS", rawDelayMs);
+        
+        return parseDelay(raw);
+    }
+
+    public static long parseDelay(String raw) {
+        long delayMs;
+        try {
+            delayMs = Long.parseLong(raw);
+        }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Delay must be a number, got: '" + raw + "'", e);
+        }
+        if (delayMs < 0) {
+            throw new IllegalArgumentException("Delay must be non-negative number");
+        }
+        return delayMs;
+    }
 
     public static String readRequestBody (HttpExchange exchange) throws IOException {
         try
