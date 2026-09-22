@@ -7,13 +7,17 @@ import java.nio.charset.StandardCharsets;
 import com.sun.net.httpserver.HttpExchange;
 
 /**
- * Helpers to faciliate HttpExchange in both master and secondary
+ * Helpers to facilitate HttpExchange in both master and secondary
  */
 
 public final class HttpSupport {
 
     public static int readPort(String rawPort) {
         String raw = System.getenv().getOrDefault("PORT", rawPort).trim();
+        return parsePort(raw);
+    }
+
+    public static int parsePort(String raw) {
         int port;
         try {
             port = Integer.parseInt(raw);
@@ -24,7 +28,7 @@ public final class HttpSupport {
             throw new IllegalArgumentException("PORT must be between 1 and 65535, got: " + port);
         }
         return port;
-}
+    } 
 
 
     public static void sendJson(HttpExchange exchange, int statusCode, String jsonBody) throws IOException {
