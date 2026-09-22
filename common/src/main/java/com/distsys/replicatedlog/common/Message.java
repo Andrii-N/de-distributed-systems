@@ -14,6 +14,8 @@ public final class Message {
     private final String text;
     private final long timestamp;
 
+    private static final Gson GSON = new Gson();
+
     public Message(String id, String text, long timestamp) {
         this.id = id;
         this.text = text;
@@ -33,8 +35,7 @@ public final class Message {
     }
 
     public JsonObject toJson() {
-        Gson gson = new Gson();
-        return gson.toJsonTree(this).getAsJsonObject();
+        return GSON.toJsonTree(this).getAsJsonObject();
     }
 
     public static Message fromJson(JsonObject json) {
@@ -43,8 +44,7 @@ public final class Message {
                 throw new IllegalArgumentException("Missing required field: " + field);
             }
         }
-        Gson gson = new Gson();
-        return gson.fromJson(json, Message.class);
+        return GSON.fromJson(json, Message.class);
     }
 
     /** 
