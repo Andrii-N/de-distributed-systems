@@ -8,9 +8,12 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import com.distsys.replicatedlog.common.HttpSupport;
+import com.distsys.replicatedlog.common.MessageStore;
 
 
 public class SecondaryApplication {
+
+    private final MessageStore messages = new MessageStore();
     
     public SecondaryApplication() {}
 
@@ -18,6 +21,7 @@ public class SecondaryApplication {
         SecondaryApplication app = new SecondaryApplication();
         int port = HttpSupport.readPort("8080");
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/replicate");
         server.createContext("/messages", app::handleGetMessage);
         
         /* HTTP requests can run on different threads at once */
@@ -31,7 +35,15 @@ public class SecondaryApplication {
             HttpSupport.sendPlainText(exchange, 405, "Method not allowed");
             return;
         }
-        HttpSupport.sendJson(exchange, 200, "{\"status\":\"OK\"}");
+        HttpSupport.sendJson(exchange, 200, messages.toJsonArray());
+    }
+
+    private void handleReplicate(HttpExchange exchange) throws IOException {
+        if(!("POST".equalsIgnoreCase(exchange.getRequestMethod()))) {
+            HttpSupport.sendPlainText(exchange, 405, "Method not allowed");
+            return;
+        }
+
 
     }
 }
