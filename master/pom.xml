@@ -10,4 +10,11 @@
     <artifactId>master</artifactId>
     <packaging>jar</packaging>
 
+    <dependencies>
+      <dependency>
+        <groupId>com.distsys.replicatedlog</groupId>
+        <artifactId>common</artifactId>
+      </dependency>
+    </dependencies>
+
 </project>
