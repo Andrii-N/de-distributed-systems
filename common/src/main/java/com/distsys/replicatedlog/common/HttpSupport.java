@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -13,6 +15,14 @@ import com.sun.net.httpserver.HttpExchange;
  */
 
 public final class HttpSupport {
+
+    public static List<String> parseSecondaryUrls (String raw) {
+        String rawUrls = System.getenv().getOrDefault("SECONDARY_URLS", raw);
+        return Arrays.stream(rawUrls.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
 
     public static int readPort(String rawPort) {
         String raw = System.getenv().getOrDefault("PORT", rawPort).trim();
