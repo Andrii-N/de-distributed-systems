@@ -14,7 +14,7 @@ import com.distsys.replicatedlog.common.Message;
  * Client-side view of one secondary node: knows how to replicate a single
  * message to it and wait for its ack
  */
-public class SecondaryClient {
+public final class SecondaryClient {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
     private final String name;

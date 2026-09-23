@@ -2,7 +2,6 @@ package com.distsys.replicatedlog.master;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.MessageStore;
 
 

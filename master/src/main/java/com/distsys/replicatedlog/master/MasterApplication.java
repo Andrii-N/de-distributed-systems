@@ -2,6 +2,8 @@ package com.distsys.replicatedlog.master;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -20,11 +22,18 @@ public class MasterApplication {
     /* Thread-safe auto-increment id */
     private final AtomicLong nextId = new AtomicLong(1);
 
-    public MasterApplication() {
+    private final SecondaryClient secondaryClient;
 
+    public MasterApplication(SecondaryClient secondaryClient) {
+        this.secondaryClient = secondaryClient;
     }
     public static void main(String[] args) throws IOException {
-        MasterApplication masterApplication = new MasterApplication();
+        String secondaryUrls = HttpSupport.parseSecondaryUrls("http://localhost:8081").getFirst();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+
+        SecondaryClient secondaryClient = new SecondaryClient("oneSecondary", secondaryUrls, httpClient);
+        MasterApplication masterApplication = new MasterApplication(secondaryClient);
         int port = HttpSupport.readPort("8080"); 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/messages", masterApplication::handleMessages);
@@ -65,6 +74,15 @@ public class MasterApplication {
         
         /* Stores message for further replication */
         messages.append(message);
+
+        /* One client replicate */
+        try {
+            secondaryClient.replicate(message);
+        }
+        catch (SecondaryClient.ReplicationException e) {
+            HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
+            return;
+        }
 
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 201, message.toJson().toString());
