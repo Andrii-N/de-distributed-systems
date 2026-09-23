@@ -13,7 +13,15 @@ import com.distsys.replicatedlog.common.MessageStore;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
-
+/**
+ * Secondary node of the replicated log.
+ *
+ * Exposes:
+ *  - POST /replicate : internal endpoint called by the master to replicate a message.
+ *                      Sleeps {@code REPLICATION_DELAY_MS} before acking, to make the
+ *                      master's blocking replication observable.
+ *  - GET  /messages   : returns every message replicated so far, in order.
+ */
 public class SecondaryApplication {
 
     private final MessageStore messages = new MessageStore();
