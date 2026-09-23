@@ -18,10 +18,14 @@ public final class HttpSupport {
 
     public static List<String> parseSecondaryUrls (String raw) {
         String rawUrls = System.getenv().getOrDefault("SECONDARY_URLS", raw);
-        return Arrays.stream(rawUrls.split(","))
+        List<String> urls = Arrays.stream(rawUrls.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+        if (urls.isEmpty()) {
+            throw new IllegalArgumentException("SECONDARY_URLS must contain at least one URL, got: '" + rawUrls + "'");
+        }
+        return urls;
     }
 
     public static int readPort(String rawPort) {
