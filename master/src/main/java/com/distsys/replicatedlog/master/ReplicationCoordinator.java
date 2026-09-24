@@ -4,6 +4,7 @@ import com.distsys.replicatedlog.common.Message;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 /**
  * Send message out to every secondary in parallel and blocks until all of
@@ -21,15 +22,24 @@ public final class ReplicationCoordinator {
     }
 
     public void replicateToAll(Message message) {
-        /* One executor starts the task on another thread and returns CompletableFuture<Void> immediately. */
+        /* .runAsync() starts each task on another thread and returns CompletableFuture<Void> immediately. */
         List<CompletableFuture<Void>> acks = secondaries.stream()
             .map(secondary -> CompletableFuture.runAsync(() -> secondary.replicate(message), executor))
             .toList();
-        /* 
-         * allOf(...) returns one future that completes only when every future in the array has completed.
-         * .join() blocks the current thread until that happens. This is the line that makes replication blocking: the master won't answer its client until all secondaries have acked.
-        */
-        CompletableFuture.allOf(acks.toArray(CompletableFuture[]::new)).join();
+        
+        try {
+            /* 
+            * allOf(...) returns one future that completes only when every future in the array has completed.
+            * .join() blocks the current thread until that happens. This is the line that makes replication blocking: the master won't answer its client until all secondaries have acked.
+            */
+            CompletableFuture.allOf(acks.toArray(CompletableFuture[]::new)).join();
+        }
+        catch (CompletionException e) {
+            if (e.getCause() instanceof SecondaryClient.ReplicationException replicationException) {
+                throw replicationException;
+            }
+            throw e;
+        }
     }
 
 }

@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -14,30 +14,36 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.distsys.replicatedlog.common.HttpSupport;
 import com.distsys.replicatedlog.common.Message;
-import com.distsys.replicatedlog.common.MessageStore;
 
-public class MasterApplication {
+/**
+ * Master node of the replicated log.
+ *
+ * Exposes:
+ *  - POST /messages : appends a message locally, replicates it to every
+ *                     secondary and only responds once all secondaries ack.
+ *  - GET  /messages : returns every message in the master's log.
+ */
+public final class MasterApplication {
 
-    private final MessageStore messages = new MessageStore();
-    /* Thread-safe auto-increment id */
-    private final AtomicLong nextId = new AtomicLong(1);
-
-    private final List<SecondaryClient> secondaries;
-
-    public MasterApplication(List<SecondaryClient> secondaries) {
-        this.secondaries = secondaries;
+    private final ReplicatedLog replicatedLog;
+    
+    public MasterApplication(ReplicatedLog replicatedLog) {
+        this.replicatedLog = replicatedLog;
     }
+
     public static void main(String[] args) throws IOException {
         List<String> secondaryUrls = HttpSupport.parseSecondaryUrls("http://localhost:8081");
-
         HttpClient httpClient = HttpClient.newHttpClient();
-
         List<SecondaryClient> secondaries = secondaryUrls.stream()
             .map(url -> new SecondaryClient(url, url, httpClient))
             .toList();
-        MasterApplication masterApplication = new MasterApplication(secondaries);
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
+        ReplicatedLog replicatedLog = new ReplicatedLog(coordinator);
+        MasterApplication masterApplication = new MasterApplication(replicatedLog);
         int port = HttpSupport.readPort("8080"); 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+
         server.createContext("/messages", masterApplication::handleMessages);
         
         /* HTTP requests can run on different threads at once */
@@ -67,33 +73,28 @@ public class MasterApplication {
             bodyText = json.get("message").getAsString();
 
         }
-         catch (IllegalArgumentException | JsonParseException e) {
+         catch(IllegalArgumentException | JsonParseException e) {
             HttpSupport.sendPlainText(exchange, 400, "Invalid request body: " + e.getMessage());
             return;
         }
-
-        Message message = new Message(String.valueOf(nextId.getAndIncrement()),bodyText, System.currentTimeMillis());
         
-        /* Stores message for further replication */
-        messages.append(message);
-
-        /* Iterating over clients to replicate */
-        for(SecondaryClient secondary : secondaries) {
-            try {
-                secondary.replicate(message);
-            }
-            catch (SecondaryClient.ReplicationException e) {
-                HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
-                return;
-            }
+        Message message;
+        try {
+            message = replicatedLog.appendAndReplicate(bodyText);
         }
-        
-
+        catch (SecondaryClient.ReplicationException e) {
+            HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
+            return;
+        }
+        catch(RuntimeException e) {
+            HttpSupport.sendPlainText(exchange, 500, "Unexpected error");
+            return;
+        }
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 201, message.toJson().toString());
     }
 
     private void handleGet(HttpExchange exchange) throws IOException {
-        HttpSupport.sendJson(exchange, 200, messages.toJsonArray());
+        HttpSupport.sendJson(exchange, 200, replicatedLog.toJsonArray());
     }
 }
