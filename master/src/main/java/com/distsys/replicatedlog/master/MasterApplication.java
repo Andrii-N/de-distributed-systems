@@ -22,18 +22,20 @@ public class MasterApplication {
     /* Thread-safe auto-increment id */
     private final AtomicLong nextId = new AtomicLong(1);
 
-    private final SecondaryClient secondaryClient;
+    private final List<SecondaryClient> secondaries;
 
-    public MasterApplication(SecondaryClient secondaryClient) {
-        this.secondaryClient = secondaryClient;
+    public MasterApplication(List<SecondaryClient> secondaries) {
+        this.secondaries = secondaries;
     }
     public static void main(String[] args) throws IOException {
-        String secondaryUrls = HttpSupport.parseSecondaryUrls("http://localhost:8081").getFirst();
+        List<String> secondaryUrls = HttpSupport.parseSecondaryUrls("http://localhost:8081");
 
         HttpClient httpClient = HttpClient.newHttpClient();
 
-        SecondaryClient secondaryClient = new SecondaryClient("oneSecondary", secondaryUrls, httpClient);
-        MasterApplication masterApplication = new MasterApplication(secondaryClient);
+        List<SecondaryClient> secondaries = secondaryUrls.stream()
+            .map(url -> new SecondaryClient(url, url, httpClient))
+            .toList();
+        MasterApplication masterApplication = new MasterApplication(secondaries);
         int port = HttpSupport.readPort("8080"); 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/messages", masterApplication::handleMessages);
@@ -75,14 +77,17 @@ public class MasterApplication {
         /* Stores message for further replication */
         messages.append(message);
 
-        /* One client replicate */
-        try {
-            secondaryClient.replicate(message);
+        /* Iterating over clients to replicate */
+        for(SecondaryClient secondary : secondaries) {
+            try {
+                secondary.replicate(message);
+            }
+            catch (SecondaryClient.ReplicationException e) {
+                HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
+                return;
+            }
         }
-        catch (SecondaryClient.ReplicationException e) {
-            HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
-            return;
-        }
+        
 
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 201, message.toJson().toString());

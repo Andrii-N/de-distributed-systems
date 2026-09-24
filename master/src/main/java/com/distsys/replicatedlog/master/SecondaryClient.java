@@ -15,7 +15,7 @@ import com.distsys.replicatedlog.common.Message;
  * message to it and wait for its ack
  */
 public final class SecondaryClient {
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
     private final String name;
     private final URI replicateUri;
