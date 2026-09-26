@@ -9,10 +9,7 @@ import java.util.concurrent.Executors;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 import com.distsys.replicatedlog.common.HttpSupport;
 import com.distsys.replicatedlog.common.Message;
 
