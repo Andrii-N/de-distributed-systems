@@ -17,7 +17,7 @@ import com.distsys.replicatedlog.common.Message;
  * message to it and wait for its ack
  */
 public final class SecondaryClient {
-    
+
     private static final Logger log = LoggerFactory.getLogger(SecondaryClient.class);
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
@@ -41,17 +41,23 @@ public final class SecondaryClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(message.toJson().toString()))
                 .build();
+
+        log.info("Dispatching message id={} to secondary {} ({})", message.getId(), name, replicateUri);
+        
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 throw new ReplicationException(name + " responded with status " + response.statusCode());
             }
+            log.info("Received ack for message id={} from secondary {}", message.getId(), name);
         }
         catch (IOException e) {
+            log.error("Unexpected error while replicating messages id={}", message.getId(), e);
             throw new ReplicationException("Failed to replicate message id=" + message.getId() + " to secondary " + name, e);
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.error("Unexpected error while replicating messages id={}", message.getId(), e);
             throw new ReplicationException("Failed to replicate message id=" + message.getId() + " to secondary " + name, e);
         }
 

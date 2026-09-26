@@ -64,6 +64,7 @@ public final class MasterApplication {
 
 
     private void handlePost(HttpExchange exchange) throws IOException {
+        log.info("Received POST /messages");
         String body = HttpSupport.readRequestBody(exchange);
         String bodyText;
         try {
@@ -80,13 +81,18 @@ public final class MasterApplication {
             message = replicatedLog.appendAndReplicate(bodyText);
         }
         catch (SecondaryClient.ReplicationException e) {
+            log.error("Replcation failed for POST /messages", e);
             HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
             return;
         }
         catch(RuntimeException e) {
+            log.error("Unexpected error while handling POST /messages", e);
             HttpSupport.sendPlainText(exchange, 500, "Unexpected error");
             return;
         }
+
+        log.info("POST /message for id = {} completed (all secondaries acked)", message.getId());
+        
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 201, message.toJson().toString());
     }

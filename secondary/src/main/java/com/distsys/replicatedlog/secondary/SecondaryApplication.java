@@ -26,7 +26,7 @@ import com.google.gson.JsonParser;
  *  - GET  /messages   : returns every message replicated so far, in order.
  */
 public class SecondaryApplication {
-    
+
     private static final Logger log = LoggerFactory.getLogger(SecondaryApplication.class);
 
     private final MessageStore messages = new MessageStore();
@@ -48,6 +48,8 @@ public class SecondaryApplication {
         server.setExecutor(Executors.newCachedThreadPool());
 
         server.start();
+
+        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), delayMs);
     }
 
     private void handleGetMessages(HttpExchange exchange) throws IOException {
@@ -55,6 +57,8 @@ public class SecondaryApplication {
             HttpSupport.sendPlainText(exchange, 405, "Method not allowed");
             return;
         }
+
+        log.info("Returning {} replicated message(s)", messages.size());
         HttpSupport.sendJson(exchange, 200, messages.toJsonArray());
     }
 
@@ -73,18 +77,21 @@ public class SecondaryApplication {
             return;
         }
         catch(RuntimeException e) {
+            log.error("Unexpected error while handling POST /messages", e);
             HttpSupport.sendPlainText(exchange, 503, "Server unavailable: " + e.getMessage());
             return;
         }
 
         /* Replicate message*/
         messages.append(message);
-
+        
         /* Delay after replication, prior to ack - so GET mid-delay includes message */
+        log.info("Received message id={} for replication, simulating delay of {}ms", message.getId(), replicationDelayMs);
         sleep(replicationDelayMs);
 
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 200, message.toJson().toString());
+        log.info("Acked message id={} (size={})", message.getId(), messages.size());
     }
 
     private static void sleep(long milliseconds) {

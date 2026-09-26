@@ -16,7 +16,7 @@ import com.distsys.replicatedlog.common.Message;
 public class ReplicatedLog {
 
     private static final Logger log = LoggerFactory.getLogger(ReplicatedLog.class);
-    
+
     private final MessageStore messages = new MessageStore();
     /* Thread-safe auto-increment id */
     private final AtomicLong nextId = new AtomicLong(1);
@@ -30,7 +30,7 @@ public class ReplicatedLog {
         Message message = new Message(String.valueOf(nextId.getAndIncrement()), bodyText,  System.currentTimeMillis());
 
         messages.append(message);
-
+        log.info("Appended message id={} to master log, replicating to secondaries", message.getId());
         coordinator.replicateToAll(message);
 
         return message;

@@ -27,6 +27,9 @@ public final class ReplicationCoordinator {
     }
 
     public void replicateToAll(Message message) {
+
+        long start = System.nanoTime();
+
         /* .runAsync() starts each task on another thread and returns CompletableFuture<Void> immediately. */
         List<CompletableFuture<Void>> acks = secondaries.stream()
             .map(secondary -> CompletableFuture.runAsync(() -> secondary.replicate(message), executor))
@@ -38,6 +41,8 @@ public final class ReplicationCoordinator {
             * .join() blocks the current thread until that happens. This is the line that makes replication blocking: the master won't answer its client until all secondaries have acked.
             */
             CompletableFuture.allOf(acks.toArray(CompletableFuture[]::new)).join();
+            long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+            log.info("Message id={} acked by all {} secondaries in {} miliseconds", message.getId(), secondaries.size(), elapsedMs);
         }
         catch (CompletionException e) {
             if (e.getCause() instanceof SecondaryClient.ReplicationException replicationException) {
