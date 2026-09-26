@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 
 /**
@@ -31,6 +34,23 @@ public final class HttpSupport {
     public static int readPort(String rawPort) {
         String raw = System.getenv().getOrDefault("PORT", rawPort).trim();
         return parsePort(raw);
+    }
+
+    public static JsonObject parseBody(String body) {
+        JsonElement parsed = JsonParser.parseString(body);
+        if (!parsed.isJsonObject()) {
+            throw new IllegalArgumentException("Request body must be a JSON object");
+        }
+
+        JsonObject json = parsed.getAsJsonObject();
+
+        if (!json.has("message") || json.get("message").isJsonNull()) {
+            throw new IllegalArgumentException("Missing required field: message");
+        }
+        if (!json.get("message").isJsonPrimitive()) {
+            throw new IllegalArgumentException("Message is not Json primitive");
+        }
+        return json;
     }
 
     public static int parsePort(String raw) {

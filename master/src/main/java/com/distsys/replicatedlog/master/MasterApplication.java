@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
@@ -64,14 +65,8 @@ public final class MasterApplication {
         String body = HttpSupport.readRequestBody(exchange);
         String bodyText;
         try {
-            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
-
-            if (!json.has("message") || json.get("message").isJsonNull()) {
-                throw new IllegalArgumentException("Missing required field: message");
-            }
             
-            bodyText = json.get("message").getAsString();
-
+            bodyText = HttpSupport.parseBody(body).get("message").getAsString();
         }
          catch(IllegalArgumentException | JsonParseException e) {
             HttpSupport.sendPlainText(exchange, 400, "Invalid request body: " + e.getMessage());
