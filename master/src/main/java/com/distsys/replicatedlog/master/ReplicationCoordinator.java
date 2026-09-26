@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * Send message out to every secondary in parallel and blocks until all of
  * them have acked. This is what makes the master's {@code POST /messages}
@@ -13,6 +16,8 @@ import java.util.concurrent.ExecutorService;
  */
 public final class ReplicationCoordinator {
     
+    private static final Logger log = LoggerFactory.getLogger(ReplicationCoordinator.class);
+
     private final List<SecondaryClient> secondaries;
     private final ExecutorService executor;
 

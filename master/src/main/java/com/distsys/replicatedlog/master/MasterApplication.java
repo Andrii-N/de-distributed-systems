@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.google.gson.JsonParseException;
@@ -22,6 +25,8 @@ import com.distsys.replicatedlog.common.Message;
  *  - GET  /messages : returns every message in the master's log.
  */
 public final class MasterApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(MasterApplication.class);
 
     private final ReplicatedLog replicatedLog;
     

@@ -2,6 +2,9 @@ package com.distsys.replicatedlog.master;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.distsys.replicatedlog.common.MessageStore;
 import com.distsys.replicatedlog.common.Message;
 
@@ -11,6 +14,9 @@ import com.distsys.replicatedlog.common.Message;
  
  */
 public class ReplicatedLog {
+
+    private static final Logger log = LoggerFactory.getLogger(ReplicatedLog.class);
+    
     private final MessageStore messages = new MessageStore();
     /* Thread-safe auto-increment id */
     private final AtomicLong nextId = new AtomicLong(1);

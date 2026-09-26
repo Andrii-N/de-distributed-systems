@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -23,6 +26,8 @@ import com.google.gson.JsonParser;
  *  - GET  /messages   : returns every message replicated so far, in order.
  */
 public class SecondaryApplication {
+    
+    private static final Logger log = LoggerFactory.getLogger(SecondaryApplication.class);
 
     private final MessageStore messages = new MessageStore();
     private final long replicationDelayMs;

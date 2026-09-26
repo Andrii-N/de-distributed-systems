@@ -7,14 +7,19 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-import com.distsys.replicatedlog.common.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.distsys.replicatedlog.common.Message;
 
 /**
  * Client-side view of one secondary node: knows how to replicate a single
  * message to it and wait for its ack
  */
 public final class SecondaryClient {
+    
+    private static final Logger log = LoggerFactory.getLogger(SecondaryClient.class);
+
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
     private final String name;
