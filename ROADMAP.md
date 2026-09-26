@@ -2,6 +2,8 @@
 
 Goal: rebuild the Iteration 1 replicated log (1 master + 2 secondaries, blocking REST replication, logging, Docker) by hand, using the generated project only as a reference you consult, never copy from.
 
+Milestone 9 (deliberate ordering-under-concurrency experiment) is deferred out of this iteration — see its section below.
+
 ## How to use the generated project
 
 1. Commit the generated code on its own branch so it stays untouched: `git switch -c reference-generated`, commit, then `git switch -c hw-iteration-one-own` from your starting point.
@@ -10,7 +12,7 @@ Goal: rebuild the Iteration 1 replicated log (1 master + 2 secondaries, blocking
 4. Commit at the end of every milestone (`git commit -m "M3: secondary GET /messages"`). Small commits let you roll back when something breaks.
 5. Never paste from the reference. If you catch yourself wanting to, re-read the docs for the class involved instead.
 
-Rough total: 10-16 hours spread over several sittings.
+Rough total: 9-14 hours spread over several sittings (with Milestone 9 deferred).
 
 ## Concepts to understand before coding (about 1 hour)
 
@@ -101,14 +103,14 @@ Goal: understand why parallel fan-out matters, by measuring it.
 4. Decide what happens when one future fails. Read what `join()` throws and how to unwrap it.
 - Done when: you can explain in your own words why the sum became a maximum, and your numbers prove it.
 
-## Milestone 9: ordering under concurrency (1-2 hours)
+## Milestone 9: ordering under concurrency — out of scope for this iteration
 
-Goal: find and fix the race yourself.
+Deferred. `ReplicatedLog.appendAndReplicate` already ended up `synchronized` as a natural consequence of Milestone 8's design (append, then replicate, then return, all as one call), so the master already serializes the assign-append-replicate-wait sequence. What this milestone would have added is the deliberate experiment: strip that guard, fire concurrent POSTs, watch ids or order diverge across nodes, then restore it and measure the throughput cost consciously rather than inheriting it by accident.
 
-- Experiment: remove any locking and fire many concurrent POSTs (for example a small loop with `curl ... &`, or a Java test using several threads). Compare the order of ids on master and on the secondaries. Can you produce a mismatch?
-- Fix it by making the "assign id, append locally, replicate, wait for acks" sequence one critical section. Learn `synchronized` and `ReentrantLock`.
-- Think about the cost: what does this do to throughput? Why is that acceptable for this homework?
-- Done when: 50 concurrent posts leave identical lists on all three nodes.
+Worth keeping in mind for a later iteration:
+- Reproducing the race (remove the lock, fire concurrent POSTs, compare order across master/secondaries).
+- Measuring the throughput cost of serializing the whole replicate-and-wait sequence, and whether a narrower lock would do.
+- `ReentrantLock` as an alternative to `synchronized`, and when it's worth the extra control.
 
 ## Milestone 10: logging (1 hour)
 
@@ -162,7 +164,7 @@ Answer these without looking anything up before you call it finished:
 1. Why does the master's POST latency equal the slowest secondary rather than the sum?
 2. What happens to a POST if a secondary is down? What would you change in a later iteration?
 3. Why is the id assigned by the master?
-4. What could reorder messages on the secondaries, and which line of your code prevents it?
+4. What could reorder messages on the secondaries if `ReplicatedLog.appendAndReplicate` weren't `synchronized`, and why does that one method being a single critical section prevent it? (This is the guard Milestone 9 would have had you break on purpose to observe.)
 5. Why do the containers use `http://secondary1:8080` and not `localhost`?
 6. What guarantees does a perfect link give you, and which of your code paths would need to change if the link could drop messages?
 7. Why can `GET /messages` on a secondary lag behind the master, and can it ever be ahead?
