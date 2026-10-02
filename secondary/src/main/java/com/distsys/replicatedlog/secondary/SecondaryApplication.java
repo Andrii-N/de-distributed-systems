@@ -44,7 +44,7 @@ public class SecondaryApplication {
         app.start(port);
     }
 
-    private HttpServer start(int port) throws IOException {
+    public HttpServer start(int port) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/replicate", this::handleReplicate);
         server.createContext("/messages", this::handleGetMessages);
