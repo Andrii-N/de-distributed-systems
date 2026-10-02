@@ -40,16 +40,22 @@ public class SecondaryApplication {
         long delayMs = HttpSupport.readDelayMs("5000");
         SecondaryApplication app = new SecondaryApplication(delayMs);
         int port = HttpSupport.readPort("8080");
+
+        app.start(port);
+    }
+
+    private HttpServer start(int port) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/replicate", app::handleReplicate);
-        server.createContext("/messages", app::handleGetMessages);
+        server.createContext("/replicate", this::handleReplicate);
+        server.createContext("/messages", this::handleGetMessages);
         
         /* HTTP requests can run on different threads at once */
         server.setExecutor(Executors.newCachedThreadPool());
-
+        
         server.start();
-
-        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), delayMs);
+        
+        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), replicationDelayMs);
+        return server; 
     }
 
     private void handleGetMessages(HttpExchange exchange) throws IOException {
