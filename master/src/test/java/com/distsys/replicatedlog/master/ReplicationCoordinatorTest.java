@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ReplicationCoordinatorTest {
@@ -58,6 +59,27 @@ public class ReplicationCoordinatorTest {
         assertTrue(elapsed >= slowDelayMs, "expected coordinator to block for at least " + slowDelayMs + "ms, took " + elapsed + "ms");
     }
 
+    @Test
+    void replicateToAllThrowsWhenAnySecondaryFails() throws IOException {
+        AtomicInteger healthyAcks = new AtomicInteger();
+        AtomicInteger failingAttempts = new AtomicInteger();
+
+        int healthyPort = startFakeSecondary(0, healthyAcks);
+        int failingPort = startFailingFakeSecondary(500, failingAttempts);
+
+        executor = Executors.newVirtualThreadPerTaskExecutor();
+        List<SecondaryClient> secondaries = List.of(
+                new SecondaryClient("healthy", "http://localhost:" + healthyPort, httpClient),
+                new SecondaryClient("failing", "http://localhost:" + failingPort, httpClient));
+
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
+
+        assertThrows(SecondaryClient.ReplicationException.class,
+                () -> coordinator.replicateToAll(new Message("1", "hello", 123L)));
+
+        assertEquals(1, failingAttempts.get());
+    }
+
     private int startFakeSecondary(long delayMs, AtomicInteger ackCounter) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/replicate", exchange -> {
@@ -71,6 +93,18 @@ public class ReplicationCoordinatorTest {
             String body = HttpSupport.readRequestBody(exchange);
             ackCounter.incrementAndGet();
             HttpSupport.sendJson(exchange, 200, body);
+        });
+        server.setExecutor(Executors.newCachedThreadPool());
+        server.start();
+        fakeSecondaries.add(server);
+        return server.getAddress().getPort();
+    }
+
+    private int startFailingFakeSecondary(int statusCode, AtomicInteger attemptCounter) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/replicate", exchange -> {
+            attemptCounter.incrementAndGet();
+            HttpSupport.sendPlainText(exchange, statusCode, "simulated failure");
         });
         server.setExecutor(Executors.newCachedThreadPool());
         server.start();
