@@ -49,6 +49,20 @@ public class SecondaryApplicationTest {
         assertEquals("second", messages.get(1).getAsJsonObject().get("text").getAsString());
     }
 
+    @Test
+    void replicateBlocksForConfiguredDelay() throws IOException, InterruptedException {
+        long delayMs = 3000;
+        server = new SecondaryApplication(delayMs).start(0);
+        int port = server.getAddress().getPort();
+
+        long start = System.currentTimeMillis();
+        replicate(port, new Message("1", "slow", 1234L));
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertTrue(elapsed >= delayMs, "expected at least " + delayMs + "ms, took " + elapsed + "ms");
+    }
+
+
     private void replicate(int port, Message message) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/replicate"))
             .header("Content-Type", "application/json")
