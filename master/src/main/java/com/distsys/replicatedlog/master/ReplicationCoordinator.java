@@ -42,7 +42,7 @@ public final class ReplicationCoordinator {
             */
             CompletableFuture.allOf(acks.toArray(CompletableFuture[]::new)).join();
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log.info("Message id={} acked by all {} secondaries in {} miliseconds", message.getId(), secondaries.size(), elapsedMs);
+            log.info("Message id={} acked by all {} secondaries in {} milliseconds", message.getId(), secondaries.size(), elapsedMs);
         }
         catch (CompletionException e) {
             if (e.getCause() instanceof SecondaryClient.ReplicationException replicationException) {
