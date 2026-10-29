@@ -32,7 +32,7 @@ public class SecondaryApplicationTest {
 
     @Test
     void replicateMessagesAndListInArrivingOrder() throws IOException, InterruptedException {
-        server = new SecondaryApplication(0).start(0);
+        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
         int port = server.getAddress().getPort();
 
         replicate(port, new Message(1,"first", 1234L));
@@ -52,7 +52,7 @@ public class SecondaryApplicationTest {
     @Test
     void replicateBlocksForConfiguredDelay() throws IOException, InterruptedException {
         long delayMs = 3000;
-        server = new SecondaryApplication(delayMs).start(0);
+        server = new SecondaryApplication(new SecondaryNode(delayMs)).start(0);
         int port = server.getAddress().getPort();
 
         long start = System.currentTimeMillis();
