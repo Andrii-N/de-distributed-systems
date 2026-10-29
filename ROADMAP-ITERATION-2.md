@@ -57,6 +57,8 @@ Goal: see Iteration 1 fail the new requirement before you fix anything.
 
 Goal: settle the contracts before touching code. Write the answers in a short `docs/iteration-2-design.md` (or the README).
 
+> **Decided** (see [docs/iteration-2-design.md](docs/iteration-2-design.md)): missing `w` defaults to `1`; the response doesn't echo `w` or report ack counts; `id` becomes the numeric sequence. What's left for this milestone is the test-first `Message` change.
+
 - **Request body:** `{"message": "...", "w": 2}`. Decide:
   - What happens when `w` is missing? Either reject with 400, or default it. If you default, decide between `w = n+1` (keeps Iteration 1 behaviour) and `w = 1`. Write down why.
   - The valid range: `1 ≤ w ≤ n + 1`, where `n` is the number of configured secondaries. Anything else (0, negative, too large, not an integer, `"2"` as a string?) gets a 400.
