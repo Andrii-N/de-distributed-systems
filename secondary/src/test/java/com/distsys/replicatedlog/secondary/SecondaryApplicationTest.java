@@ -62,6 +62,50 @@ public class SecondaryApplicationTest {
         assertTrue(elapsed >= delayMs, "expected at least " + delayMs + "ms, took " + elapsed + "ms");
     }
 
+    @Test
+    void getMessagesRespondsWithJsonContentType() throws IOException, InterruptedException {
+        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
+        int port = server.getAddress().getPort();
+
+        HttpResponse<String> response = send(port, "/messages", HttpRequest.newBuilder().GET());
+
+        assertEquals(200, response.statusCode());
+        assertTrue(response.headers().firstValue("Content-Type").orElse("").startsWith("application/json"));
+        assertEquals("[]", response.body());
+    }
+
+    @Test
+    void wrongMethodsAreRejectedWith405() throws IOException, InterruptedException {
+        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
+        int port = server.getAddress().getPort();
+
+        assertEquals(405, send(port, "/replicate", HttpRequest.newBuilder().GET()).statusCode());
+        assertEquals(405, send(port, "/messages", HttpRequest.newBuilder().POST(HttpRequest.BodyPublishers.ofString("{}"))).statusCode());
+    }
+
+    @Test
+    void invalidReplicateBodiesAreRejectedWith400AndNotStored() throws IOException, InterruptedException {
+        SecondaryNode node = new SecondaryNode(0);
+        server = new SecondaryApplication(node).start(0);
+        int port = server.getAddress().getPort();
+
+        for (String body : new String[] {
+                "not json",
+                "{\"text\":\"hi\",\"timestamp\":1}",
+                "{\"id\":\"1\",\"text\":\"hi\",\"timestamp\":1}",
+                "{\"id\":0,\"text\":\"hi\",\"timestamp\":1}"}) {
+            HttpResponse<String> response = send(port, "/replicate", HttpRequest.newBuilder()
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body)));
+            assertEquals(400, response.statusCode(), "body: " + body);
+        }
+
+        assertTrue(node.listMsgs().isEmpty());
+    }
+
+    private HttpResponse<String> send(int port, String path, HttpRequest.Builder builder) throws IOException, InterruptedException {
+        return client.send(builder.uri(URI.create("http://localhost:" + port + path)).build(), HttpResponse.BodyHandlers.ofString());
+    }
 
     private void replicate(int port, Message message) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/replicate"))
