@@ -2,6 +2,7 @@ package com.distsys.replicatedlog.secondary;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
@@ -12,7 +13,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import com.distsys.replicatedlog.common.HttpSupport;
 import com.distsys.replicatedlog.common.Message;
-import com.distsys.replicatedlog.common.MessageStore;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
@@ -29,16 +30,15 @@ public class SecondaryApplication {
 
     private static final Logger log = LoggerFactory.getLogger(SecondaryApplication.class);
 
-    private final MessageStore messages = new MessageStore();
-    private final long replicationDelayMs;
+    private final SecondaryNode node;
     
-    public SecondaryApplication(long replicationDelayMs) {
-        this.replicationDelayMs = replicationDelayMs;
+    public SecondaryApplication(SecondaryNode node) {
+        this.node = node;
     }
 
     public static void main (String[] args) throws IOException {
         long delayMs = HttpSupport.readDelayMs("5000");
-        SecondaryApplication app = new SecondaryApplication(delayMs);
+        SecondaryApplication app = new SecondaryApplication(new SecondaryNode(delayMs));
         int port = HttpSupport.readPort("8080");
 
         app.start(port);
@@ -54,7 +54,7 @@ public class SecondaryApplication {
         
         server.start();
         
-        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), replicationDelayMs);
+        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), node.getReplicationDelayMs());
         return server; 
     }
 
@@ -64,8 +64,15 @@ public class SecondaryApplication {
             return;
         }
 
-        log.info("Returning {} replicated message(s)", messages.size());
-        HttpSupport.sendJson(exchange, 200, messages.toJsonArray());
+        /* One snapshot for both the log and the body, so they can't disagree */
+        List<Message> snapshot = node.listMsgs();
+        JsonArray jsonArray = new JsonArray();
+        for (Message message : snapshot) {
+            jsonArray.add(message.toJson());
+        }
+
+        log.info("Returning {} replicated message(s)", snapshot.size());
+        HttpSupport.sendJson(exchange, 200, jsonArray.toString());
     }
 
     private void handleReplicate(HttpExchange exchange) throws IOException {
@@ -88,29 +95,10 @@ public class SecondaryApplication {
             return;
         }
 
-        /* Replicate message*/
-        messages.append(message);
-        
-        /* Delay after replication, prior to ack - so GET mid-delay includes message */
-        log.info("Received message id={} for replication, simulating delay of {}ms", message.getId(), replicationDelayMs);
-        sleep(replicationDelayMs);
+        node.receiveMessage(message);
 
         /* Acknowledgement send*/
         HttpSupport.sendJson(exchange, 200, message.toJson().toString());
-        log.info("Acked message id={} (size={})", message.getId(), messages.size());
-    }
-
-    private static void sleep(long milliseconds) {
-        if (milliseconds <= 0) {
-            return;
-        }
-        try {
-            Thread.sleep(milliseconds);
-        }
-        catch(InterruptedException e) {
-            /* Restore interrupted indication before doing anything else */
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while simulating replication delay", e); 
-        }
+        log.info("Acked message id={} (size={})", message.getId(), node.listMsgs().size());
     }
 }
