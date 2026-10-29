@@ -51,7 +51,7 @@ public class ReplicationCoordinatorTest {
         ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
 
         long start = System.currentTimeMillis();
-        coordinator.replicateToAll(new Message("1", "hello", 123L));
+        coordinator.replicateToAll(new Message(1, "hello", 123L));
         long elapsed = System.currentTimeMillis() - start;
 
         assertEquals(1, fastAcks.get());
@@ -75,7 +75,7 @@ public class ReplicationCoordinatorTest {
         ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
 
         assertThrows(SecondaryClient.ReplicationException.class,
-                () -> coordinator.replicateToAll(new Message("1", "hello", 123L)));
+                () -> coordinator.replicateToAll(new Message(1, "hello", 123L)));
 
         assertEquals(1, failingAttempts.get());
     }

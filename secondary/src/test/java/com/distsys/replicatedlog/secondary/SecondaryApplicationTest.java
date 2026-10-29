@@ -35,8 +35,8 @@ public class SecondaryApplicationTest {
         server = new SecondaryApplication(0).start(0);
         int port = server.getAddress().getPort();
 
-        replicate(port, new Message("1","first", 1234L));
-        replicate(port, new Message("2","second", 12345L));
+        replicate(port, new Message(1,"first", 1234L));
+        replicate(port, new Message(2,"second", 12345L));
 
         HttpResponse<String> response = client.send(
                 HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/messages")).GET().build(),
@@ -56,7 +56,7 @@ public class SecondaryApplicationTest {
         int port = server.getAddress().getPort();
 
         long start = System.currentTimeMillis();
-        replicate(port, new Message("1", "slow", 1234L));
+        replicate(port, new Message(1, "slow", 1234L));
         long elapsed = System.currentTimeMillis() - start;
 
         assertTrue(elapsed >= delayMs, "expected at least " + delayMs + "ms, took " + elapsed + "ms");
