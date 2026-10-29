@@ -27,7 +27,7 @@ public class ReplicatedLog {
     }
 
     public synchronized Message appendAndReplicate (String bodyText) {
-        Message message = new Message(String.valueOf(nextId.getAndIncrement()), bodyText,  System.currentTimeMillis());
+        Message message = new Message(nextId.getAndIncrement(), bodyText,  System.currentTimeMillis());
 
         messages.append(message);
         log.info("Appended message id={} to master log, replicating to secondaries", message.getId());

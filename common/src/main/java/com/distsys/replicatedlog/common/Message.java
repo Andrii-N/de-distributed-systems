@@ -1,6 +1,7 @@
 package com.distsys.replicatedlog.common;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.Objects;
@@ -10,19 +11,19 @@ import java.util.Objects;
  */
 public final class Message {
 
-    private final String id;
+    private final long id;
     private final String text;
     private final long timestamp;
 
     private static final Gson GSON = new Gson();
 
-    public Message(String id, String text, long timestamp) {
+    public Message(long id, String text, long timestamp) {
         this.id = id;
         this.text = text;
         this.timestamp = timestamp;
     }
 
-    public String getId() {
+    public long getId() {
         return id;
     }
 
@@ -44,7 +45,28 @@ public final class Message {
                 throw new IllegalArgumentException("Missing required field: " + field);
             }
         }
+        validateId(json.get("id"));
         return GSON.fromJson(json, Message.class);
+    }
+
+    /**
+     * Gson alone would coerce "12345" to 12345, truncate 2.5 to 2 and overflow huge numbers silently,
+     * so the id is checked first: a JSON number, integral, fits in a long, and >= 1 (master's sequence starts at 1)
+     */
+    private static void validateId(JsonElement idElement) {
+        if (!idElement.isJsonPrimitive() || !idElement.getAsJsonPrimitive().isNumber()) {
+            throw new IllegalArgumentException("Field id must be a JSON number, got: " + idElement);
+        }
+        long id;
+        try {
+            id = idElement.getAsBigDecimal().longValueExact();
+        }
+        catch (ArithmeticException e) {
+            throw new IllegalArgumentException("Field id must be an integer that fits in a long, got: " + idElement, e);
+        }
+        if (id < 1) {
+            throw new IllegalArgumentException("Field id must be >= 1, got: " + id);
+        }
     }
 
     /** 
@@ -58,7 +80,7 @@ public final class Message {
         if (!(o instanceof Message message)) {
             return false;
         }
-        return Objects.equals(id, message.id) && timestamp == message.timestamp && Objects.equals(text, message.text);
+        return id == message.id && timestamp == message.timestamp && Objects.equals(text, message.text);
     }
 
     @Override 
