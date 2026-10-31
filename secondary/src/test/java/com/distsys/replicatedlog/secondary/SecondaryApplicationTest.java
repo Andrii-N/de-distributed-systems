@@ -32,7 +32,7 @@ public class SecondaryApplicationTest {
 
     @Test
     void replicateMessagesAndListInArrivingOrder() throws IOException, InterruptedException {
-        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
+        server = new SecondaryApplication(new SecondaryNode("secondary1", 0)).start(0);
         int port = server.getAddress().getPort();
 
         replicate(port, new Message(1,"first", 1234L));
@@ -52,7 +52,7 @@ public class SecondaryApplicationTest {
     @Test
     void replicateBlocksForConfiguredDelay() throws IOException, InterruptedException {
         long delayMs = 3000;
-        server = new SecondaryApplication(new SecondaryNode(delayMs)).start(0);
+        server = new SecondaryApplication(new SecondaryNode("secondary1", delayMs)).start(0);
         int port = server.getAddress().getPort();
 
         long start = System.currentTimeMillis();
@@ -64,7 +64,7 @@ public class SecondaryApplicationTest {
 
     @Test
     void getMessagesRespondsWithJsonContentType() throws IOException, InterruptedException {
-        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
+        server = new SecondaryApplication(new SecondaryNode("secondary1", 0)).start(0);
         int port = server.getAddress().getPort();
 
         HttpResponse<String> response = send(port, "/messages", HttpRequest.newBuilder().GET());
@@ -76,7 +76,7 @@ public class SecondaryApplicationTest {
 
     @Test
     void wrongMethodsAreRejectedWith405() throws IOException, InterruptedException {
-        server = new SecondaryApplication(new SecondaryNode(0)).start(0);
+        server = new SecondaryApplication(new SecondaryNode("secondary1", 0)).start(0);
         int port = server.getAddress().getPort();
 
         assertEquals(405, send(port, "/replicate", HttpRequest.newBuilder().GET()).statusCode());
@@ -85,7 +85,7 @@ public class SecondaryApplicationTest {
 
     @Test
     void invalidReplicateBodiesAreRejectedWith400AndNotStored() throws IOException, InterruptedException {
-        SecondaryNode node = new SecondaryNode(0);
+        SecondaryNode node = new SecondaryNode("secondary1", 0);
         server = new SecondaryApplication(node).start(0);
         int port = server.getAddress().getPort();
 

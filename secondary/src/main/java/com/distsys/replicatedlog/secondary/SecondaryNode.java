@@ -17,10 +17,17 @@ public class SecondaryNode {
     private static final Logger log = LoggerFactory.getLogger(SecondaryNode.class);
 
     private final MessageStore messages = new MessageStore();
+    /* Logical name (e.g. "secondary1"); the id the master and the transport address this node by */
+    private final String nodeId;
     private final long replicationDelayMs;
 
-    public SecondaryNode(long replicationDelayMs) {
+    public SecondaryNode(String nodeId, long replicationDelayMs) {
+        this.nodeId = nodeId;
         this.replicationDelayMs = replicationDelayMs;
+    }
+
+    public String getNodeId() {
+        return nodeId;
     }
 
     public long getReplicationDelayMs() {
@@ -39,7 +46,7 @@ public class SecondaryNode {
         messages.append(message);
         
         /* Delay after replication, prior to ack - so GET mid-delay includes message */
-        log.info("Stored message id={}, simulating delay of {}ms", message.getId(), replicationDelayMs);
+        log.info("{} stored message id={}, simulating delay of {}ms", nodeId, message.getId(), replicationDelayMs);
         
         sleep(replicationDelayMs);
     }

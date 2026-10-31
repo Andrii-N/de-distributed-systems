@@ -98,3 +98,21 @@ Why this breaks the replicated log:
 The fix (Milestone 4): make **"assign id + append to the master log"** a single critical section, so no other thread can append between the two steps. Inside that lock, a plain `long` counter would be enough; the `AtomicLong` stays only for convenience. Replication and waiting for acks stay **outside** the lock. Otherwise you are back to the Iteration 1 problem where a slow `w = 3` write blocks a `w = 1` write.
 
 Iteration 1 never showed this bug, because the whole `appendAndReplicate` method was `synchronized`. The lock was too large, but it happened to cover both steps.
+
+## 5. Node identity: logical names
+
+Every node is addressed by a **logical name**, not by its URL. The transport (`Transport.send(from, to, message)`) and the logs use these names.
+
+| Node | Name comes from | Docker value | Default (local run) |
+|---|---|---|---|
+| master | `NODE_ID` | `master` | `master` |
+| each secondary, its own name | `NODE_ID` | `secondary1`, `secondary2` | `secondary` |
+| the master's view of the secondaries | `SECONDARY_URLS` as `name=url` pairs | `secondary1=http://secondary1:8080,secondary2=http://secondary2:8080` | `secondary1=http://localhost:8081` |
+
+Rules:
+- A `SECONDARY_URLS` entry without a name (`http://localhost:8082`) is named `secondary<N>` by its 1-based position. That keeps the Iteration 1 format working.
+- Names must be unique, and an entry with an empty name or URL is rejected at startup.
+- Configuration order is preserved, so dispatch and log order are predictable.
+- A secondary's own `NODE_ID` should match the name the master uses for it. Nothing enforces this yet; it only affects how the logs read.
+
+Why names instead of URLs: they read better in logs, they match the Docker service names, and the harness (Milestone 3) has no URLs at all, only node objects registered under names.
