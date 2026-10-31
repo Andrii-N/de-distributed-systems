@@ -19,7 +19,7 @@ import com.google.gson.JsonParser;
 
 /**
  * Secondary application HTTP adapter of the replicated log.
- * Replication logic transfered to {@class: SecondaryNode}
+ * Replication logic transfered to {@link SecondaryNode}
  * Exposes:
  *  - POST /replicate : internal endpoint called by the master to replicate a message.
  *  - GET  /messages   : returns every message replicated so far, in order.
