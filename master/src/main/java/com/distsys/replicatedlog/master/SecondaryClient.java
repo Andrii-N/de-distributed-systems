@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.distsys.replicatedlog.common.Message;
+import com.distsys.replicatedlog.common.ReplicationException;
 
 /**
  * Client-side view of one secondary node: knows how to replicate a single
@@ -61,15 +62,5 @@ public final class SecondaryClient {
             throw new ReplicationException("Failed to replicate message id=" + message.getId() + " to secondary " + name, e);
         }
 
-    }
-
-    public static final class ReplicationException extends RuntimeException {
-        public ReplicationException(String message) {
-            super(message);
-        }
-
-        public ReplicationException(String message, Throwable cause) {
-            super(message, cause);
-        }
     }
 }

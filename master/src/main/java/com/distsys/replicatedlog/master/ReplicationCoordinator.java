@@ -1,6 +1,7 @@
 package com.distsys.replicatedlog.master;
 
 import com.distsys.replicatedlog.common.Message;
+import com.distsys.replicatedlog.common.ReplicationException;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +46,7 @@ public final class ReplicationCoordinator {
             log.info("Message id={} acked by all {} secondaries in {} milliseconds", message.getId(), secondaries.size(), elapsedMs);
         }
         catch (CompletionException e) {
-            if (e.getCause() instanceof SecondaryClient.ReplicationException replicationException) {
+            if (e.getCause() instanceof ReplicationException replicationException) {
                 throw replicationException;
             }
             throw e;
