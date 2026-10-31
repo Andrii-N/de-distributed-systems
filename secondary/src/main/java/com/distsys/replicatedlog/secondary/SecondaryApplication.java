@@ -18,12 +18,10 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
 /**
- * Secondary node of the replicated log.
- *
+ * Secondary application HTTP adapter of the replicated log.
+ * Replication logic transfered to {@class: SecondaryNode}
  * Exposes:
  *  - POST /replicate : internal endpoint called by the master to replicate a message.
- *                      Sleeps {@code REPLICATION_DELAY_MS} before acking, to make the
- *                      master's blocking replication observable.
  *  - GET  /messages   : returns every message replicated so far, in order.
  */
 public class SecondaryApplication {

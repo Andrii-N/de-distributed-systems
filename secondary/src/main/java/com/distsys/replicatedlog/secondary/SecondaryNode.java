@@ -8,6 +8,10 @@ import org.slf4j.LoggerFactory;
 import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.MessageStore;
 
+/**
+ * SecondaryNode
+ * replication logic of a secondary, no HTTP; used by the HTTP adapter and the test harness
+ */
 public class SecondaryNode {
 
     private static final Logger log = LoggerFactory.getLogger(SecondaryNode.class);
@@ -35,7 +39,8 @@ public class SecondaryNode {
         messages.append(message);
         
         /* Delay after replication, prior to ack - so GET mid-delay includes message */
-        log.info("Received message id={} for replication, simulating delay of {}ms", message.getId(), replicationDelayMs);
+        log.info("Stored message id={}, simulating delay of {}ms", message.getId(), replicationDelayMs);
+        
         sleep(replicationDelayMs);
     }
 
