@@ -6,7 +6,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -19,16 +22,49 @@ import com.sun.net.httpserver.HttpExchange;
 
 public final class HttpSupport {
 
-    public static List<String> parseSecondaryUrls (String raw) {
-        String rawUrls = System.getenv().getOrDefault("SECONDARY_URLS", raw);
-        List<String> urls = Arrays.stream(rawUrls.split(","))
+    /**
+     * Logical name of this process (e.g. "master", "secondary1"), used as its node id in logs and by the transport
+     */
+    public static String readNodeId(String rawNodeId) {
+        String nodeId = System.getenv().getOrDefault("NODE_ID", rawNodeId).trim();
+        if (nodeId.isEmpty()) {
+            throw new IllegalArgumentException("NODE_ID must not be empty");
+        }
+        return nodeId;
+    }
+
+    public static Map<String, String> readSecondaries(String rawSecondaries) {
+        return parseSecondaries(System.getenv().getOrDefault("SECONDARY_URLS", rawSecondaries));
+    }
+
+    /**
+     * Secondaries as logical name -> base URL, in configuration order.
+     * Entries are comma-separated "name=url"; an entry without a name gets "secondary<N>" by its 1-based position
+     */
+    public static Map<String, String> parseSecondaries(String raw) {
+        List<String> entries = Arrays.stream(raw.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
-        if (urls.isEmpty()) {
-            throw new IllegalArgumentException("SECONDARY_URLS must contain at least one URL, got: '" + rawUrls + "'");
+        if (entries.isEmpty()) {
+            throw new IllegalArgumentException("SECONDARY_URLS must contain at least one secondary, got: '" + raw + "'");
         }
-        return urls;
+
+        /* LinkedHashMap keeps configuration order, so logs and dispatch order stay predictable */
+        Map<String, String> secondaries = new LinkedHashMap<>();
+        for (int i = 0; i < entries.size(); i++) {
+            String entry = entries.get(i);
+            int separator = entry.indexOf('=');
+            String name = separator < 0 ? "secondary" + (i + 1) : entry.substring(0, separator).trim();
+            String url = separator < 0 ? entry : entry.substring(separator + 1).trim();
+            if (name.isEmpty() || url.isEmpty()) {
+                throw new IllegalArgumentException("SECONDARY_URLS entry must be 'name=url' or 'url', got: '" + entry + "'");
+            }
+            if (secondaries.putIfAbsent(name, url) != null) {
+                throw new IllegalArgumentException("Duplicate secondary name in SECONDARY_URLS: '" + name + "'");
+            }
+        }
+        return Collections.unmodifiableMap(secondaries);
     }
 
     public static int readPort(String rawPort) {

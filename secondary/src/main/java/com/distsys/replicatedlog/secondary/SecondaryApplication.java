@@ -35,8 +35,9 @@ public class SecondaryApplication {
     }
 
     public static void main (String[] args) throws IOException {
+        String nodeId = HttpSupport.readNodeId("secondary");
         long delayMs = HttpSupport.readDelayMs("5000");
-        SecondaryApplication app = new SecondaryApplication(new SecondaryNode(delayMs));
+        SecondaryApplication app = new SecondaryApplication(new SecondaryNode(nodeId, delayMs));
         int port = HttpSupport.readPort("8080");
 
         app.start(port);
@@ -52,7 +53,7 @@ public class SecondaryApplication {
         
         server.start();
         
-        log.info("Secondary listening on port {} (replicationDelayMs={})", server.getAddress().getPort(), node.getReplicationDelayMs());
+        log.info("Secondary {} listening on port {} (replicationDelayMs={})", node.getNodeId(), server.getAddress().getPort(), node.getReplicationDelayMs());
         return server; 
     }
 

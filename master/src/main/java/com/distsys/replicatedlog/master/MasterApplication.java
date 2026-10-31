@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,10 +37,12 @@ public final class MasterApplication {
     }
 
     public static void main(String[] args) throws IOException {
-        List<String> secondaryUrls = HttpSupport.parseSecondaryUrls("http://localhost:8081");
+        /* Logical name of this node */
+        String nodeId = HttpSupport.readNodeId("master");
+        Map<String, String> secondaryUrls = HttpSupport.readSecondaries("http://localhost:8081");
         HttpClient httpClient = HttpClient.newHttpClient();
-        List<SecondaryClient> secondaries = secondaryUrls.stream()
-            .map(url -> new SecondaryClient(url, url, httpClient))
+        List<SecondaryClient> secondaries = secondaryUrls.entrySet().stream()
+            .map(secondary -> new SecondaryClient(secondary.getKey(), secondary.getValue(), httpClient))
             .toList();
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
@@ -53,6 +56,8 @@ public final class MasterApplication {
         /* HTTP requests can run on different threads at once */
         server.setExecutor(Executors.newCachedThreadPool());
         server.start();
+
+        log.info("Master {} listening on port {}, secondaries {}", nodeId, server.getAddress().getPort(), secondaryUrls);
     }
 
     private void handleMessages(HttpExchange exchange) throws IOException {

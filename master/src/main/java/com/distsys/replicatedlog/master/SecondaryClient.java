@@ -23,6 +23,7 @@ public final class SecondaryClient {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
+    /* Logical node id (e.g. "secondary1"), not the URL */
     private final String name;
     private final URI replicateUri;
     private final HttpClient httpClient;   

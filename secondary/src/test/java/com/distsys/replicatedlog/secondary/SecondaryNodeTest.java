@@ -22,7 +22,7 @@ public class SecondaryNodeTest {
 
     @Test
     void listsReceivedMessagesInArrivalOrder() {
-        SecondaryNode node = new SecondaryNode(0);
+        SecondaryNode node = new SecondaryNode("secondary1", 0);
 
         node.receiveMessage(new Message(1, "first", 1L));
         node.receiveMessage(new Message(2, "second", 2L));
@@ -32,7 +32,7 @@ public class SecondaryNodeTest {
 
     @Test
     void listMsgsReturnsCopyThatDoesNotChangeTheNode() {
-        SecondaryNode node = new SecondaryNode(0);
+        SecondaryNode node = new SecondaryNode("secondary1", 0);
         node.receiveMessage(new Message(1, "first", 1L));
 
         List<Message> listed = node.listMsgs();
@@ -44,7 +44,7 @@ public class SecondaryNodeTest {
     @Test
     void receiveBlocksForConfiguredDelay() {
         long delayMs = 300;
-        SecondaryNode node = new SecondaryNode(delayMs);
+        SecondaryNode node = new SecondaryNode("secondary1", delayMs);
 
         long start = System.currentTimeMillis();
         node.receiveMessage(new Message(1, "slow", 1L));
@@ -59,7 +59,7 @@ public class SecondaryNodeTest {
      */
     @Test
     void messageIsVisibleWhileDelayIsStillRunning() throws Exception {
-        SecondaryNode node = new SecondaryNode(1000);
+        SecondaryNode node = new SecondaryNode("secondary1", 1000);
 
         CompletableFuture<Void> receive = CompletableFuture.runAsync(() -> node.receiveMessage(new Message(1, "slow", 1L)));
 
@@ -75,7 +75,7 @@ public class SecondaryNodeTest {
 
     @Test
     void interruptDuringDelayThrowsAndRestoresInterruptFlag() throws InterruptedException {
-        SecondaryNode node = new SecondaryNode(10_000);
+        SecondaryNode node = new SecondaryNode("secondary1", 10_000);
         AtomicReference<Throwable> thrown = new AtomicReference<>();
         AtomicBoolean interruptFlagAfter = new AtomicBoolean();
 
