@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.distsys.replicatedlog.common.ReplicationException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,7 +76,7 @@ public class ReplicationCoordinatorTest {
 
         ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
 
-        assertThrows(SecondaryClient.ReplicationException.class,
+        assertThrows(ReplicationException.class,
                 () -> coordinator.replicateToAll(new Message(1, "hello", 123L)));
 
         assertEquals(1, failingAttempts.get());

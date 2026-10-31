@@ -15,6 +15,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.google.gson.JsonParseException;
 import com.distsys.replicatedlog.common.HttpSupport;
 import com.distsys.replicatedlog.common.Message;
+import com.distsys.replicatedlog.common.ReplicationException;
 
 /**
  * Master node of the replicated log.
@@ -80,7 +81,7 @@ public final class MasterApplication {
         try {
             message = replicatedLog.appendAndReplicate(bodyText);
         }
-        catch (SecondaryClient.ReplicationException e) {
+        catch (ReplicationException e) {
             log.error("Replcation failed for POST /messages", e);
             HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
             return;
