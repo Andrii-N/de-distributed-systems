@@ -25,11 +25,11 @@ public final class ReplicationCoordinator {
     private final List<String> secondaryIds;
     
     public ReplicationCoordinator(Transport transport, String fromId, List<String> secondaryIds) {
-        this.transport = transport;
+        this.transport = Objects.requireNonNull(transport);
         this.fromId = Objects.requireNonNull(fromId);
         this.secondaryIds = List.copyOf(secondaryIds);
         if (this.secondaryIds.isEmpty()) {
-            throw new IllegalArgumentException("HttpTransport needs at least one secondary");
+            throw new IllegalArgumentException("ReplicationCoordinator needs at least one secondary");
         }
     }
 
