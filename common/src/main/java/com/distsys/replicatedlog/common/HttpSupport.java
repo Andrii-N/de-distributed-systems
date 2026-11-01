@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -132,6 +133,17 @@ public final class HttpSupport {
             in.transferTo(out);
             return out.toString(StandardCharsets.UTF_8);
         }
+    }
+
+    /**
+     * JSON array of messages, in list order; shared by the master and secondary GET /messages adapters
+     */
+    public static String toJsonArray(List<Message> messages) {
+        JsonArray jsonArray = new JsonArray();
+        for (Message message : messages) {
+            jsonArray.add(message.toJson());
+        }
+        return jsonArray.toString();
     }
 
     public static void sendJson(HttpExchange exchange, int statusCode, String jsonBody) throws IOException {
