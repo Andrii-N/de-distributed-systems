@@ -89,10 +89,10 @@ public final class MasterApplication {
         
         Message message;
         try {
-            message = masterNode.appendAndReplicate(bodyText);
+            message = masterNode.appendMsg(bodyText);
         }
         catch (ReplicationException e) {
-            log.error("Replcation failed for POST /messages", e);
+            log.error("Replication failed for POST /messages", e);
             HttpSupport.sendPlainText(exchange, 502, "Replication failed: " + e.getMessage());
             return;
         }
@@ -109,6 +109,6 @@ public final class MasterApplication {
     }
 
     private void handleGet(HttpExchange exchange) throws IOException {
-        HttpSupport.sendJson(exchange, 200, masterNode.toJsonArray());
+        HttpSupport.sendJson(exchange, 200, HttpSupport.toJsonArray(masterNode.listMsgs()));
     }
 }
