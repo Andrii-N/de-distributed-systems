@@ -13,16 +13,16 @@ import com.distsys.replicatedlog.common.Message;
  * until the message has been replicated to every secondary.
  
  */
-public class ReplicatedLog {
+public class MasterNode {
 
-    private static final Logger log = LoggerFactory.getLogger(ReplicatedLog.class);
+    private static final Logger log = LoggerFactory.getLogger(MasterNode.class);
 
     private final MessageStore messages = new MessageStore();
     /* Thread-safe auto-increment id */
     private final AtomicLong nextId = new AtomicLong(1);
     private final ReplicationCoordinator coordinator;
 
-    public ReplicatedLog(ReplicationCoordinator coordinator) {
+    public MasterNode(ReplicationCoordinator coordinator) {
         this.coordinator = coordinator;
     }
 
@@ -36,8 +36,8 @@ public class ReplicatedLog {
         return message;
     }
 
+
     public String toJsonArray() {
         return messages.toJsonArray();
     }
-    
 }

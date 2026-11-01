@@ -31,10 +31,10 @@ public final class MasterApplication {
 
     private static final Logger log = LoggerFactory.getLogger(MasterApplication.class);
 
-    private final ReplicatedLog replicatedLog;
+    private final MasterNode masterNode;
     
-    public MasterApplication(ReplicatedLog replicatedLog) {
-        this.replicatedLog = replicatedLog;
+    public MasterApplication(MasterNode masterNode) {
+        this.masterNode = masterNode;
     }
 
     public static void main(String[] args) throws IOException {
@@ -48,11 +48,11 @@ public final class MasterApplication {
         /* Node id -> client; clients keyed by node id; HttpTransport routes by these ids */
         Map<String, SecondaryClient> secondaries = new LinkedHashMap<>();
         secondaryUrls.forEach((name, url) -> secondaries.put(name, new SecondaryClient(name, url, httpClient)));
+
         HttpTransport httpTransport = new HttpTransport(secondaries, executor);
         ReplicationCoordinator coordinator = new ReplicationCoordinator(httpTransport, nodeId, List.copyOf(secondaries.keySet()));
-
-        ReplicatedLog replicatedLog = new ReplicatedLog(coordinator);
-        MasterApplication masterApplication = new MasterApplication(replicatedLog);
+        MasterNode masterNode = new MasterNode(coordinator);
+        MasterApplication masterApplication = new MasterApplication(masterNode);
         int port = HttpSupport.readPort("8080"); 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
@@ -89,7 +89,7 @@ public final class MasterApplication {
         
         Message message;
         try {
-            message = replicatedLog.appendAndReplicate(bodyText);
+            message = masterNode.appendAndReplicate(bodyText);
         }
         catch (ReplicationException e) {
             log.error("Replcation failed for POST /messages", e);
@@ -109,6 +109,6 @@ public final class MasterApplication {
     }
 
     private void handleGet(HttpExchange exchange) throws IOException {
-        HttpSupport.sendJson(exchange, 200, replicatedLog.toJsonArray());
+        HttpSupport.sendJson(exchange, 200, masterNode.toJsonArray());
     }
 }
