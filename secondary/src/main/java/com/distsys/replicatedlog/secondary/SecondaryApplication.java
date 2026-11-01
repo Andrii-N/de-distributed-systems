@@ -13,7 +13,6 @@ import com.sun.net.httpserver.HttpServer;
 
 import com.distsys.replicatedlog.common.HttpSupport;
 import com.distsys.replicatedlog.common.Message;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
@@ -65,13 +64,9 @@ public class SecondaryApplication {
 
         /* One snapshot for both the log and the body, so they can't disagree */
         List<Message> snapshot = node.listMsgs();
-        JsonArray jsonArray = new JsonArray();
-        for (Message message : snapshot) {
-            jsonArray.add(message.toJson());
-        }
 
         log.info("Returning {} replicated message(s)", snapshot.size());
-        HttpSupport.sendJson(exchange, 200, jsonArray.toString());
+        HttpSupport.sendJson(exchange, 200, HttpSupport.toJsonArray(snapshot));
     }
 
     private void handleReplicate(HttpExchange exchange) throws IOException {
