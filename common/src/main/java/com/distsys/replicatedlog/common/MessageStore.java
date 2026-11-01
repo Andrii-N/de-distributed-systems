@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 
-import com.google.gson.JsonArray;
-
 /**
 * Thread-safe in-memory storage of {@link Message}s, appedned in the receive order.
 Used by master and secondaries.
@@ -36,18 +34,6 @@ public final class MessageStore {
         synchronized (messages) {
             return new ArrayList<>(messages);
         }
-    }
-
-    public String toJsonArray() {
-        JsonArray jsonArray = new JsonArray();
-        /**
-         * Iterates the copy outside any lock
-         */
-        for (Message message : snapshot()) {
-            jsonArray.add(message.toJson());
-        }
-
-        return jsonArray.toString();
     }
 
     public int size() {
