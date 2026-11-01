@@ -3,6 +3,7 @@ package com.distsys.replicatedlog.master;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -40,12 +41,16 @@ public final class MasterApplication {
         /* Logical name of this node */
         String nodeId = HttpSupport.readNodeId("master");
         Map<String, String> secondaryUrls = HttpSupport.readSecondaries("http://localhost:8081");
+
         HttpClient httpClient = HttpClient.newHttpClient();
-        List<SecondaryClient> secondaries = secondaryUrls.entrySet().stream()
-            .map(secondary -> new SecondaryClient(secondary.getKey(), secondary.getValue(), httpClient))
-            .toList();
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-        ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
+
+        /* Node id -> client; clients keyed by node id; HttpTransport routes by these ids */
+        Map<String, SecondaryClient> secondaries = new LinkedHashMap<>();
+        secondaryUrls.forEach((name, url) -> secondaries.put(name, new SecondaryClient(name, url, httpClient)));
+        HttpTransport httpTransport = new HttpTransport(secondaries, executor);
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(httpTransport, nodeId, List.copyOf(secondaries.keySet()));
+
         ReplicatedLog replicatedLog = new ReplicatedLog(coordinator);
         MasterApplication masterApplication = new MasterApplication(replicatedLog);
         int port = HttpSupport.readPort("8080"); 
