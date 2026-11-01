@@ -2,11 +2,11 @@ package com.distsys.replicatedlog.master;
 
 import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.ReplicationException;
+import com.distsys.replicatedlog.common.Transport;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +19,14 @@ public final class ReplicationCoordinator {
     
     private static final Logger log = LoggerFactory.getLogger(ReplicationCoordinator.class);
 
-    private final List<SecondaryClient> secondaries;
-    private final ExecutorService executor;
-
-    public ReplicationCoordinator(List<SecondaryClient> secondaries, ExecutorService executor) {
-        this.secondaries = secondaries;
-        this.executor = executor;
+    private final Transport transport;
+    private final String fromId;
+    private final List<String> secondaryIds;
+    
+    public ReplicationCoordinator(Transport transport, String fromId, List<String> secondaryIds) {
+        this.transport = transport;
+        this.fromId = fromId;
+        this.secondaryIds = secondaryIds;
     }
 
     public void replicateToAll(Message message) {
@@ -32,8 +34,8 @@ public final class ReplicationCoordinator {
         long start = System.nanoTime();
 
         /* .runAsync() starts each task on another thread and returns CompletableFuture<Void> immediately. */
-        List<CompletableFuture<Void>> acks = secondaries.stream()
-            .map(secondary -> CompletableFuture.runAsync(() -> secondary.replicate(message), executor))
+        List<CompletableFuture<Void>> acks = secondaryIds.stream()
+            .map(secondary -> transport.send(fromId, secondary, message))
             .toList();
         
         try {
@@ -43,7 +45,7 @@ public final class ReplicationCoordinator {
             */
             CompletableFuture.allOf(acks.toArray(CompletableFuture[]::new)).join();
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            log.info("Message id={} acked by all {} secondaries in {} milliseconds", message.getId(), secondaries.size(), elapsedMs);
+            log.info("Message id={} acked by all {} secondaries in {} milliseconds", message.getId(), secondaryIds.size(), elapsedMs);
         }
         catch (CompletionException e) {
             if (e.getCause() instanceof ReplicationException replicationException) {
