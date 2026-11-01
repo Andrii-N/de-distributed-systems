@@ -116,3 +116,9 @@ Rules:
 - A secondary's own `NODE_ID` should match the name the master uses for it. Nothing enforces this yet; it only affects how the logs read.
 
 Why names instead of URLs: they read better in logs, they match the Docker service names, and the harness (Milestone 3) has no URLs at all, only node objects registered under names.
+
+## 6. Open question: a failed replication leaves the message on the master
+
+`MasterNode.appendMsg` appends the message to the master's log **before** replicating it. If replication then fails, the client gets `502`, but the message stays in the master's log, and on any secondaries that did ack. A client that retries creates a duplicate with a new id. This has been true since Iteration 1 and is documented by `MasterNodeTest.failedReplicationThrowsButKeepsMessageInMasterLog`.
+
+Decide in Milestone 5, when failures become partial (`w` acks reached or not): is a `502` "the write did not happen" or "the write may have happened"? Real systems usually say the latter and make retries safe with deduplication.
