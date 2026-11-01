@@ -1,116 +1,89 @@
 package com.distsys.replicatedlog.master;
 
-
-import com.distsys.replicatedlog.common.HttpSupport;
-import com.distsys.replicatedlog.common.Message;
-import com.sun.net.httpserver.HttpServer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.http.HttpClient;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
+import com.distsys.replicatedlog.common.Message;
 import com.distsys.replicatedlog.common.ReplicationException;
+import com.distsys.replicatedlog.common.Transport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Coordinator logic only: transports are lambdas, so there is no HTTP and no ports.
+ * HTTP behaviour is covered by {@link HttpTransportTest}.
+ */
 public class ReplicationCoordinatorTest {
 
-    private final List<HttpServer> fakeSecondaries = new ArrayList<>();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private ExecutorService executor;
+    private static final Message MESSAGE = new Message(1, "hello", 123L);
 
-    @AfterEach
-    void tearDown() {
-        fakeSecondaries.forEach(server -> server.stop(0));
-        if (executor != null) {
-            executor.shutdownNow();
-        }
+    @Test
+    void blocksUntilEverySecondaryHasAcked() {
+        long slowDelayMs = 500;
+        Transport transport = (from, to, message) -> switch (to) {
+            case "fast" -> CompletableFuture.completedFuture(null);
+            case "slow" -> CompletableFuture.runAsync(() -> { },
+                    CompletableFuture.delayedExecutor(slowDelayMs, TimeUnit.MILLISECONDS));
+            default -> CompletableFuture.failedFuture(new ReplicationException("unexpected target " + to));
+        };
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(transport, "master", List.of("fast", "slow"));
+
+        long start = System.nanoTime();
+        coordinator.replicateToAll(MESSAGE);
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertTrue(elapsedMs >= slowDelayMs, "expected coordinator to block for at least " + slowDelayMs + "ms, took " + elapsedMs + "ms");
     }
 
     @Test
-    void blocksUntilEverySecondaryHasAcked() throws IOException {
-        AtomicInteger fastAcks = new AtomicInteger();
-        AtomicInteger slowAcks = new AtomicInteger();
+    void sendsTheMessageToEverySecondaryFromTheConfiguredNode() {
+        Set<String> sends = ConcurrentHashMap.newKeySet();
+        Transport transport = (from, to, message) -> {
+            sends.add(from + "->" + to + ":" + message.getId());
+            return CompletableFuture.completedFuture(null);
+        };
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(transport, "master", List.of("secondary1", "secondary2"));
 
-        int fastPort = startFakeSecondary(0, fastAcks);
-        long slowDelayMs = 3000;
-        int slowPort = startFakeSecondary(slowDelayMs, slowAcks);
+        coordinator.replicateToAll(MESSAGE);
 
-        executor = Executors.newVirtualThreadPerTaskExecutor();
-        List<SecondaryClient> secondaries = List.of(
-                new SecondaryClient("fast", "http://localhost:" + fastPort, httpClient),
-                new SecondaryClient("slow", "http://localhost:" + slowPort, httpClient));
-
-        ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
-
-        long start = System.currentTimeMillis();
-        coordinator.replicateToAll(new Message(1, "hello", 123L));
-        long elapsed = System.currentTimeMillis() - start;
-
-        assertEquals(1, fastAcks.get());
-        assertEquals(1, slowAcks.get());
-        assertTrue(elapsed >= slowDelayMs, "expected coordinator to block for at least " + slowDelayMs + "ms, took " + elapsed + "ms");
+        assertEquals(Set.of("master->secondary1:1", "master->secondary2:1"), sends);
     }
 
     @Test
-    void replicateToAllThrowsWhenAnySecondaryFails() throws IOException {
-        AtomicInteger healthyAcks = new AtomicInteger();
-        AtomicInteger failingAttempts = new AtomicInteger();
+    void throwsReplicationExceptionWhenAnySecondaryFails() {
+        Transport transport = (from, to, message) -> to.equals("failing")
+                ? CompletableFuture.failedFuture(new ReplicationException("simulated failure"))
+                : CompletableFuture.completedFuture(null);
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(transport, "master", List.of("healthy", "failing"));
 
-        int healthyPort = startFakeSecondary(0, healthyAcks);
-        int failingPort = startFailingFakeSecondary(500, failingAttempts);
-
-        executor = Executors.newVirtualThreadPerTaskExecutor();
-        List<SecondaryClient> secondaries = List.of(
-                new SecondaryClient("healthy", "http://localhost:" + healthyPort, httpClient),
-                new SecondaryClient("failing", "http://localhost:" + failingPort, httpClient));
-
-        ReplicationCoordinator coordinator = new ReplicationCoordinator(secondaries, executor);
-
-        assertThrows(ReplicationException.class,
-                () -> coordinator.replicateToAll(new Message(1, "hello", 123L)));
-
-        assertEquals(1, failingAttempts.get());
+        assertThrows(ReplicationException.class, () -> coordinator.replicateToAll(MESSAGE));
     }
 
-    private int startFakeSecondary(long delayMs, AtomicInteger ackCounter) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/replicate", exchange -> {
-            if (delayMs > 0) {
-                try {
-                    Thread.sleep(delayMs);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            String body = HttpSupport.readRequestBody(exchange);
-            ackCounter.incrementAndGet();
-            HttpSupport.sendJson(exchange, 200, body);
+    /**
+     * HttpTransport fails inside runAsync, which stores the exception wrapped in a CompletionException
+     * (unlike failedFuture above); the coordinator must still surface the ReplicationException itself
+     */
+    @Test
+    void unwrapsReplicationExceptionThrownInsideAnAsyncSend() {
+        Transport transport = (from, to, message) -> CompletableFuture.runAsync(() -> {
+            throw new ReplicationException("simulated failure in " + to);
         });
-        server.setExecutor(Executors.newCachedThreadPool());
-        server.start();
-        fakeSecondaries.add(server);
-        return server.getAddress().getPort();
+        ReplicationCoordinator coordinator = new ReplicationCoordinator(transport, "master", List.of("secondary1"));
+
+        assertThrows(ReplicationException.class, () -> coordinator.replicateToAll(MESSAGE));
     }
 
-    private int startFailingFakeSecondary(int statusCode, AtomicInteger attemptCounter) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/replicate", exchange -> {
-            attemptCounter.incrementAndGet();
-            HttpSupport.sendPlainText(exchange, statusCode, "simulated failure");
-        });
-        server.setExecutor(Executors.newCachedThreadPool());
-        server.start();
-        fakeSecondaries.add(server);
-        return server.getAddress().getPort();
+    @Test
+    void rejectsEmptySecondaryList() {
+        Transport transport = (from, to, message) -> CompletableFuture.completedFuture(null);
+
+        assertThrows(IllegalArgumentException.class, () -> new ReplicationCoordinator(transport, "master", List.of()));
     }
 }
