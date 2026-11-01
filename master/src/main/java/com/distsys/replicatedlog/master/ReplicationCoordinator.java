@@ -5,6 +5,7 @@ import com.distsys.replicatedlog.common.ReplicationException;
 import com.distsys.replicatedlog.common.Transport;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -25,17 +26,20 @@ public final class ReplicationCoordinator {
     
     public ReplicationCoordinator(Transport transport, String fromId, List<String> secondaryIds) {
         this.transport = transport;
-        this.fromId = fromId;
-        this.secondaryIds = secondaryIds;
+        this.fromId = Objects.requireNonNull(fromId);
+        this.secondaryIds = List.copyOf(secondaryIds);
+        if (this.secondaryIds.isEmpty()) {
+            throw new IllegalArgumentException("HttpTransport needs at least one secondary");
+        }
     }
 
     public void replicateToAll(Message message) {
 
         long start = System.nanoTime();
 
-        /* .runAsync() starts each task on another thread and returns CompletableFuture<Void> immediately. */
+        /* `send` returns immediately, so all secondaries are contacted in parallel */
         List<CompletableFuture<Void>> acks = secondaryIds.stream()
-            .map(secondary -> transport.send(fromId, secondary, message))
+            .map(secondaryId -> transport.send(fromId, secondaryId, message))
             .toList();
         
         try {
