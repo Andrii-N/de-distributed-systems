@@ -6,7 +6,7 @@ COPY pom.xml pom.xml
 COPY common common
 COPY secondary secondary
 COPY master/pom.xml master/pom.xml
-RUN mvn -pl master -am -DskipTests package
+RUN mvn -pl secondary -am -DskipTests package
 
 # ---- runtime stage ----
 FROM eclipse-temurin:25-jdk
