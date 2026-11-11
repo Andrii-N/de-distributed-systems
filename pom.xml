@@ -11,6 +11,7 @@
       <module>common</module>
       <module>master</module>
       <module>secondary</module>
+      <module>harness</module>
     </modules>
 
     <properties>
@@ -28,6 +29,16 @@
         <dependency>
           <groupId>com.distsys.replicatedlog</groupId>
           <artifactId>common</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.distsys.replicatedlog</groupId>
+          <artifactId>master</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.distsys.replicatedlog</groupId>
+          <artifactId>secondary</artifactId>
           <version>${project.version}</version>
         </dependency>
         <dependency>

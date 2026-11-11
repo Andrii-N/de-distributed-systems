@@ -44,6 +44,9 @@
                 <goal>shade</goal>
               </goals>
               <configuration>
+                <!-- Write the runnable uber-jar to secondary-all.jar; secondary.jar stays a thin library jar for the harness -->
+                <outputFile>${project.build.directory}/secondary-all.jar</outputFile>
+                <createDependencyReducedPom>false</createDependencyReducedPom>
                 <transformers>
                   <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                     <mainClass>com.distsys.replicatedlog.secondary.SecondaryApplication</mainClass>
