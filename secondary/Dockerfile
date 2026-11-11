@@ -6,10 +6,11 @@ COPY pom.xml pom.xml
 COPY common common
 COPY secondary secondary
 COPY master/pom.xml master/pom.xml
+COPY harness/pom.xml harness/pom.xml
 RUN mvn -pl secondary -am -DskipTests package
 
 # ---- runtime stage ----
 FROM eclipse-temurin:25-jdk
 WORKDIR /app
-COPY --from=build /workspace/secondary/target/secondary.jar app.jar
+COPY --from=build /workspace/secondary/target/secondary-all.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

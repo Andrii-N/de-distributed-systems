@@ -58,19 +58,19 @@ Bash:
 ```bash
 mvn -q package
 
-PORT=8081 NODE_ID=secondary1 REPLICATION_DELAY_MS=0 java -jar secondary/target/secondary.jar &
-PORT=8082 NODE_ID=secondary2 REPLICATION_DELAY_MS=5000 java -jar secondary/target/secondary.jar &
+PORT=8081 NODE_ID=secondary1 REPLICATION_DELAY_MS=0 java -jar secondary/target/secondary-all.jar &
+PORT=8082 NODE_ID=secondary2 REPLICATION_DELAY_MS=5000 java -jar secondary/target/secondary-all.jar &
 PORT=8080 NODE_ID=master \
   SECONDARY_URLS="secondary1=http://localhost:8081,secondary2=http://localhost:8082" \
-  java -jar master/target/master.jar &
+  java -jar master/target/master-all.jar &
 ```
 
 PowerShell (one terminal per service; `$env:` values stay set for the rest of that terminal session):
 
 ```powershell
-$env:PORT="8081"; $env:NODE_ID="secondary1"; $env:REPLICATION_DELAY_MS="0"; java -jar secondary/target/secondary.jar
-$env:PORT="8082"; $env:NODE_ID="secondary2"; $env:REPLICATION_DELAY_MS="5000"; java -jar secondary/target/secondary.jar
-$env:PORT="8080"; $env:NODE_ID="master"; $env:SECONDARY_URLS="secondary1=http://localhost:8081,secondary2=http://localhost:8082"; java -jar master/target/master.jar
+$env:PORT="8081"; $env:NODE_ID="secondary1"; $env:REPLICATION_DELAY_MS="0"; java -jar secondary/target/secondary-all.jar
+$env:PORT="8082"; $env:NODE_ID="secondary2"; $env:REPLICATION_DELAY_MS="5000"; java -jar secondary/target/secondary-all.jar
+$env:PORT="8080"; $env:NODE_ID="master"; $env:SECONDARY_URLS="secondary1=http://localhost:8081,secondary2=http://localhost:8082"; java -jar master/target/master-all.jar
 ```
 
 In PowerShell 5.1, `curl` is an alias for `Invoke-WebRequest`. Use `curl.exe` to run the curl examples above, or `Invoke-RestMethod`.
